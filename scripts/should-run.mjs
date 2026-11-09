@@ -30,6 +30,7 @@ const hourRng = rng('day-' + today);
 const hour = 7 + Math.floor(hourRng() * 15); // random hour 07-21 UTC
 
 const already = existsSync(LOG) && readFileSync(LOG, 'utf8').includes(today);
-const run = days.includes(dow) && now.getUTCHours() >= hour && !already;
+const forced = process.env.FORCE_RUN === 'true'; // manual runs skip the random gate
+const run = forced || (days.includes(dow) && now.getUTCHours() >= hour && !already);
 console.log(`today=${today} active=${days.includes(dow)} hour=${hour} already=${already} run=${run}`);
 if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `run=${run}\n`);

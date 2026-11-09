@@ -14,6 +14,8 @@ jobs:
         with:
           node-version: 22
       - id: gate
+        env:
+          FORCE_RUN: ${{ github.event_name == 'workflow_dispatch' }}
         run: node scripts/should-run.mjs
       - if: steps.gate.outputs.run == 'true'
         run: npm ci && npx playwright install --with-deps chromium
