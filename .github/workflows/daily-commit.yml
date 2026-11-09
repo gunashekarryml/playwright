@@ -1,0 +1,33 @@
+name: Daily Health Check
+on:
+  schedule:
+    - cron: '7 * * * *'   # hourly; scripts/should-run.mjs picks ~5 random days/week at a random hour
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: gate
+        run: node scripts/should-run.mjs
+      - if: steps.gate.outputs.run == 'true'
+        run: npm ci && npx playwright install --with-deps chromium
+      - if: steps.gate.outputs.run == 'true'
+        name: Run test, log result, commit
+        run: |
+          start=$(date +%s)
+          status=pass
+          npx playwright test || status=fail
+          secs=$(( $(date +%s) - start ))
+          echo "$(date -u +%F) $(date -u +%H:%M)Z status=$status duration=${secs}s" >> .activity/health.log
+          # COMMIT_EMAIL must be verified on your GitHub account for the commit to count on your graph
+          git config user.name "${{ github.repository_owner }}"
+          git config user.email "${{ secrets.COMMIT_EMAIL }}"
+          git add .activity/health.log
+          git commit -m "chore: saucedemo health check ($status, ${secs}s)"
+          git push
